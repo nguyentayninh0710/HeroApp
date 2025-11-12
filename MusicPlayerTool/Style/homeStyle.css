@@ -213,3 +213,51 @@ footer {
   background: #1a1a1a;
   color: #ddd;
 }
+
+/* --- Hover preview overlay --- */
+.song-card {
+  position: relative;
+}
+
+.song-card .hover-indicator {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,.35);
+  opacity: 0;
+  transition: opacity .2s ease;
+  pointer-events: none;
+}
+
+.song-card:hover .hover-indicator {
+  opacity: 1;
+}
+
+.hover-indicator .bubble {
+  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,.55);
+  border: 1px solid rgba(255,255,255,.15);
+  padding: .4rem .6rem;
+  border-radius: .65rem;
+  font-size: .85rem;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.hover-indicator .bubble .pulse {
+  width: .55rem;
+  height: .55rem;
+  border-radius: 999px;
+  background: #61d266; /* “playing” dot */
+  box-shadow: 0 0 0 .2rem rgba(97,210,102,.15);
+  animation: pulse 1.25s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: .85; }
+  50% { transform: scale(1.25); opacity: .45; }
+  100% { transform: scale(1); opacity: .85; }
+}

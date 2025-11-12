@@ -2,12 +2,12 @@
 import os
 import re
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Literal, Dict, Any, Tuple
+from typing import Optional, List, Literal, Dict, Any
 
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import errors as mysql_errors
-from fastapi import FastAPI, HTTPException, Query, Depends, status, Header, Request
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, Field, validator
@@ -72,7 +72,7 @@ TIME_RE = re.compile(r"^(?P<h>\d{1,2}):(?P<m>[0-5]\d):(?P<s>[0-5]\d)$")
 
 def norm_duration(val: Optional[str]) -> Optional[str]:
     """
-    Accepts: 'HH:MM:SS' or 'M:SS' or 'MM:SS'
+    Accepts: 'HH:MM:SS' or 'M:SS' or 'MM:SS' or total seconds (int)
     Returns: 'HH:MM:SS' or None
     """
     if not val:
@@ -156,10 +156,11 @@ class UpdateSongRequest(CreateSongRequest):
     pass
 
 # ------------------ Row mapper ------------------
+# IMPORTANT: use %H:%i:%S (capital %S) to avoid mysql-connector treating '%s' as a placeholder
 SELECT_FIELDS = """
     `SongID`            AS song_id,
     `Title`             AS title,
-    TIME_FORMAT(`Duration`, '%%H:%%i:%%s') AS duration,
+    TIME_FORMAT(`Duration`, '%H:%i:%S') AS duration,
     `URL_File`          AS url_file,
     `CoverImageURL`     AS cover_image_url,
     `ThumbnailURL`      AS thumbnail_url,
@@ -226,12 +227,11 @@ def list_songs(
         elif s == "title_desc":  order = "ORDER BY `Title` DESC"
         else:                    order = "ORDER BY `SongID` DESC"  # default id_desc
 
-        # Tính offset và nhúng trực tiếp (đã được validate là số nguyên)
         offset = (page - 1) * page_size
         limit_clause = f"LIMIT {int(page_size)} OFFSET {int(offset)}"
 
         sql = f"SELECT {SELECT_FIELDS} FROM `song` {where_sql} {order} {limit_clause}"
-        cur.execute(sql, tuple(vals))  # CHỈ bind các tham số WHERE
+        cur.execute(sql, tuple(vals))  # only bind WHERE params
         rows = cur.fetchall() or []
         return rows
 
@@ -345,7 +345,6 @@ def update_song(song_id: int, payload: UpdateSongRequest, _auth=Depends(require_
             add("SpotifyPreviewURL", _validate_url_or_none(payload.spotify_preview_url))
 
         if not sets:
-            # no changes
             return row
 
         sql = f"UPDATE `song` SET {', '.join(sets)} WHERE `SongID`=%s"
@@ -389,5 +388,5 @@ def delete_song(song_id: int, _auth=Depends(require_access)):
 # ------------------ Dev runner ------------------
 if __name__ == "__main__":
     import uvicorn
-    # Chạy riêng cổng 8002 để không trùng user.py
-    uvicorn.run("song:app", host="0.0.0.0", port=8002, reload=True)
+    # Chạy riêng cổng 8002 để không trùng user.py (điều chỉnh nếu cần)
+    uvicorn.run("song:app", host="0.0.0.0", port=8000, reload=True)
